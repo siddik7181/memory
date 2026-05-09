@@ -2,7 +2,7 @@
 
 from fastmcp import FastMCP
 
-from .indexer import index_sessions
+from .indexer import index_all_sources
 from .indexer import save_memory as _save
 from .knowledge_graph import (
     add_relation,
@@ -27,6 +27,7 @@ def memory_search(
     top_k: int = 5,
     project: str = "",
     since: str = "",
+    source: str = "",
 ) -> str:
     """Search past conversations and saved memories by meaning.
 
@@ -35,12 +36,14 @@ def memory_search(
         top_k: Number of results to return (default 5).
         project: Filter to a specific project name (optional).
         since: Only return memories after this ISO 8601 timestamp (optional).
+        source: Filter by source CLI — 'claude', 'codex', 'copilot', or 'manual' (optional).
     """
     hits = _search(
         query,
         top_k=top_k,
         project=project or None,
         since=since or None,
+        source=source or None,
     )
     if not hits:
         return "No relevant memories found."
@@ -48,7 +51,7 @@ def memory_search(
     lines = []
     for i, h in enumerate(hits, 1):
         lines.append(
-            f"[{i}] score={h['score']}  project={h['project']}  {h['timestamp']}\n{h['text']}"
+            f"[{i}] score={h['score']}  source={h.get('source','')}  project={h['project']}  {h['timestamp']}\n{h['text']}"
         )
     return "\n\n".join(lines)
 
@@ -68,9 +71,11 @@ def memory_save(text: str, tags: str = "") -> str:
 
 @mcp.tool()
 def memory_index() -> str:
-    """Re-index all Claude Code session history from ~/.claude/projects/."""
-    added = index_sessions(verbose=False)
-    return f"Indexed {added} new chunks."
+    """Re-index all AI CLI session history (Claude Code, Codex CLI, Copilot CLI)."""
+    results = index_all_sources(verbose=False)
+    total = sum(results.values())
+    lines = [f"  {src}: +{count} chunks" for src, count in results.items()]
+    return f"Indexed {total} new chunks total.\n" + "\n".join(lines)
 
 
 @mcp.tool()
@@ -78,7 +83,8 @@ def memory_stats() -> str:
     """Return stats about the memory store."""
     s = _stats()
     projects = ", ".join(s["projects"]) or "none"
-    return f"Total chunks: {s['total_chunks']}\nProjects: {projects}"
+    sources = ", ".join(s.get("sources", [])) or "none"
+    return f"Total chunks: {s['total_chunks']}\nSources: {sources}\nProjects: {projects}"
 
 
 @mcp.tool()

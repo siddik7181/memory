@@ -4,7 +4,7 @@
 import click
 
 from memory_load.config import CHROMA_DIR, MEMORY_DIR
-from memory_load.indexer import index_sessions, save_memory
+from memory_load.indexer import index_all_sources, index_sessions, save_memory
 from memory_load.knowledge_graph import (
     add_relation,
     invalidate_relation,
@@ -33,11 +33,28 @@ def init():
 
 @cli.command()
 @click.option("--verbose", "-v", is_flag=True)
-def index(verbose):
-    """Index all Claude Code session history."""
+@click.option(
+    "--source",
+    type=click.Choice(["all", "claude", "codex", "copilot"]),
+    default="all",
+    show_default=True,
+    help="Which source to index.",
+)
+def index(verbose, source):
+    """Index AI CLI session history (claude, codex, copilot, or all)."""
     click.echo("Indexing sessions...")
-    added = index_sessions(verbose=verbose)
-    click.echo(f"Done. Added {added} new chunks.")
+    if source == "all":
+        results = index_all_sources(verbose=verbose)
+        total = sum(results.values())
+        for src, count in results.items():
+            click.echo(f"  {src}: +{count} chunks")
+        click.echo(f"Done. Added {total} new chunks total.")
+    else:
+        from memory_load.indexer import index_codex_sessions, index_copilot_sessions
+
+        fn = {"claude": index_sessions, "codex": index_codex_sessions, "copilot": index_copilot_sessions}[source]
+        added = fn(verbose=verbose)
+        click.echo(f"Done. Added {added} new chunks.")
 
 
 @cli.command()
@@ -45,14 +62,21 @@ def index(verbose):
 @click.option("--top-k", "-k", default=5, show_default=True)
 @click.option("--project", "-p", default=None, help="Filter by project name")
 @click.option("--since", default=None, help="ISO 8601 lower-bound timestamp")
-def query(query_text, top_k, project, since):
+@click.option(
+    "--source",
+    "-s",
+    default=None,
+    type=click.Choice(["claude", "codex", "copilot", "manual"]),
+    help="Filter by source CLI",
+)
+def query(query_text, top_k, project, since, source):
     """Search memories by meaning."""
-    hits = search(query_text, top_k=top_k, project=project, since=since)
+    hits = search(query_text, top_k=top_k, project=project, since=since, source=source)
     if not hits:
         click.echo("No results.")
         return
     for i, h in enumerate(hits, 1):
-        click.echo(f"\n[{i}] score={h['score']}  {h['project']}  {h['timestamp']}")
+        click.echo(f"\n[{i}] score={h['score']}  {h.get('source','')}  {h['project']}  {h['timestamp']}")
         click.echo(h["text"])
 
 
@@ -71,6 +95,8 @@ def stat():
     """Show memory store stats."""
     s = stats()
     click.echo(f"Total chunks: {s['total_chunks']}")
+    if s.get("sources"):
+        click.echo(f"Sources: {', '.join(s['sources'])}")
     if s["projects"]:
         click.echo("Projects:")
         for p in s["projects"]:

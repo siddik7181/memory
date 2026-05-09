@@ -16,6 +16,7 @@ def search(
     top_k: int = TOP_K,
     project: str | None = None,
     since: str | None = None,
+    source: str | None = None,
 ) -> list[dict]:
     """Return top_k relevant memory chunks for query.
 
@@ -24,6 +25,7 @@ def search(
         top_k: Max results.
         project: Filter by project directory name (e.g. '-Users-abu-siddik-spikes').
         since: ISO 8601 timestamp lower bound (e.g. '2026-01-01T00:00:00.000Z').
+        source: Filter by source CLI ('claude', 'codex', 'copilot', 'manual').
     """
     model = SentenceTransformer(EMBED_MODEL)
     collection = _get_collection()
@@ -33,6 +35,8 @@ def search(
         return []
 
     where_clauses = []
+    if source:
+        where_clauses.append({"source": {"$eq": source}})
     if project:
         where_clauses.append({"project": {"$eq": project}})
     if since:
@@ -64,6 +68,7 @@ def search(
             {
                 "text": doc,
                 "score": round(1 - dist, 4),
+                "source": meta.get("source", "claude"),
                 "project": meta.get("project"),
                 "session_id": meta.get("session_id"),
                 "timestamp": meta.get("timestamp"),
@@ -85,4 +90,6 @@ def stats() -> dict:
     collection = _get_collection()
     count = collection.count()
     projects = list_projects()
-    return {"total_chunks": count, "projects": projects}
+    all_meta = collection.get(include=["metadatas"])["metadatas"]
+    sources = sorted({m.get("source", "claude") for m in all_meta})
+    return {"total_chunks": count, "projects": projects, "sources": sources}

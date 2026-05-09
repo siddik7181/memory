@@ -1,0 +1,13 @@
+README.md
+pyproject.toml
+claude_memory.egg-info/PKG-INFO
+claude_memory.egg-info/SOURCES.txt
+claude_memory.egg-info/dependency_links.txt
+claude_memory.egg-info/entry_points.txt
+claude_memory.egg-info/top_level.txt
+memory/__init__.py
+memory/cli.py
+memory/manager.py
+memory/store.py
+tests/test_cli.py
+tests/test_memory.py

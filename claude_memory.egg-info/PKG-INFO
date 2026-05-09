@@ -1,3 +1,11 @@
+Metadata-Version: 2.4
+Name: claude-memory
+Version: 0.1.0
+Summary: Local memory storage for Claude AI
+License: MIT
+Requires-Python: >=3.11
+Description-Content-Type: text/markdown
+
 # memory
 
 A lightweight local memory store for [Claude](https://www.anthropic.com/claude) (or any LLM).

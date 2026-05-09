@@ -1,0 +1,21 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "claude-memory"
+version = "0.1.0"
+description = "Local memory storage for Claude AI"
+readme = "README.md"
+requires-python = ">=3.11"
+license = { text = "MIT" }
+
+[project.scripts]
+claude-memory = "memory.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["memory*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

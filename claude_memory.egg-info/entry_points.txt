@@ -1,0 +1,2 @@
+[console_scripts]
+claude-memory = memory.cli:main
